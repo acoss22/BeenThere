@@ -1,0 +1,100 @@
+<section class="add-visit">
+  <div class="add-visit__header">
+    <h2>Add a visit</h2>
+    <p>Add a country you've visited and start filling your world map.</p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="form-field">
+      <label for="country">
+        Country
+        <span aria-hidden="true">*</span>
+      </label>
+
+      <select
+        id="country"
+        formControlName="countryCode"
+      >
+        <option value="" disabled>Select a country</option>
+
+        @for (country of countries; track country.code) {
+          <option [value]="country.code">
+            {{ country.name }}
+          </option>
+        }
+      </select>
+
+      @if (
+        form.controls.countryCode.touched &&
+        form.controls.countryCode.hasError('required')
+      ) {
+        <p class="form-error">
+          Please select a country.
+        </p>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="visitedAt">
+        When did you visit?
+        <span class="optional">Optional</span>
+      </label>
+
+      <input
+        id="visitedAt"
+        type="month"
+        formControlName="visitedAt"
+      />
+    </div>
+
+    <div
+      class="form-field"
+      formArrayName="cities"
+    >
+      <div class="cities-header">
+        <label>
+          Cities visited
+          <span class="optional">Optional</span>
+        </label>
+
+        <button
+          type="button"
+          class="add-city-button"
+          (click)="addCity()"
+        >
+          + Add city
+        </button>
+      </div>
+
+      <div class="cities">
+        @for (city of cities.controls; track city; let i = $index) {
+          <div class="city-row">
+            <input
+              type="text"
+              [formControlName]="i"
+              [placeholder]="'City ' + (i + 1)"
+            />
+
+            @if (cities.length > 1) {
+              <button
+                type="button"
+                class="remove-city-button"
+                (click)="removeCity(i)"
+                [attr.aria-label]="'Remove city ' + (i + 1)"
+              >
+                Remove
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <button
+      type="submit"
+      class="submit-button"
+    >
+      Add to my map
+    </button>
+  </form>
+</section>
