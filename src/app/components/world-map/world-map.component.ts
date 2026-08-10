@@ -3,13 +3,21 @@ import {
   Component,
   ElementRef,
   OnDestroy,
+  PLATFORM_ID,
   ViewChild,
   effect,
   inject,
   signal
 } from '@angular/core';
-import * as L from 'leaflet';
-import { Feature, GeoJsonObject } from 'geojson';
+import { isPlatformBrowser } from '@angular/common';
+import type {
+  GeoJSON as LeafletGeoJSON,
+  Layer,
+  Map as LeafletMap,
+  Path,
+  PathOptions
+} from 'leaflet';
+import type { Feature, GeoJsonObject } from 'geojson';
 import { TravelService } from '../../services/travel.service';
 
 @Component({
@@ -24,9 +32,11 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
   private mapElement!: ElementRef<HTMLDivElement>;
 
   private readonly travelService = inject(TravelService);
+  private readonly platformId = inject(PLATFORM_ID);
 
-  private map?: L.Map;
-  private geoJsonLayer?: L.GeoJSON;
+  private leaflet?: typeof import('leaflet');
+  private map?: LeafletMap;
+  private geoJsonLayer?: LeafletGeoJSON;
 
   readonly isLoading = signal(true);
   readonly error = signal('');
@@ -41,22 +51,44 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.createMap();
-    this.loadCountries();
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.initializeMap();
   }
 
   ngOnDestroy(): void {
     this.map?.remove();
   }
 
+  private async initializeMap(): Promise<void> {
+    try {
+      this.leaflet = await import('leaflet');
+
+      this.createMap();
+      await this.loadCountries();
+    } catch {
+      this.error.set('The world map could not be loaded.');
+      this.isLoading.set(false);
+    }
+  }
+
   private createMap(): void {
-    this.map = L.map(this.mapElement.nativeElement, {
-      zoomControl: true,
-      minZoom: 1,
-      maxZoom: 7,
-      attributionControl: false,
-      worldCopyJump: false
-    });
+    if (!this.leaflet) {
+      return;
+    }
+
+    this.map = this.leaflet.map(
+      this.mapElement.nativeElement,
+      {
+        zoomControl: true,
+        minZoom: 1,
+        maxZoom: 7,
+        attributionControl: false,
+        worldCopyJump: false
+      }
+    );
 
     this.map.setView([20, 0], 2);
 
@@ -67,45 +99,65 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private async loadCountries(): Promise<void> {
+    if (!this.leaflet || !this.map) {
+      return;
+    }
+
     try {
-      const response = await fetch('/maps/countries.geojson');
+      const response = await fetch(
+        '/maps/countries.geojson'
+      );
 
       if (!response.ok) {
         throw new Error();
       }
 
-      const data = await response.json() as GeoJsonObject;
+      const data =
+        await response.json() as GeoJsonObject;
 
-      this.geoJsonLayer = L.geoJSON(data, {
-        style: feature => this.getCountryStyle(feature),
-        onEachFeature: (feature, layer) => {
-          this.configureCountry(feature, layer);
-        }
-      });
+      this.geoJsonLayer =
+        this.leaflet.geoJSON(data, {
+          style: feature =>
+            this.getCountryStyle(feature),
 
-      this.geoJsonLayer.addTo(this.map!);
+          onEachFeature: (feature, layer) => {
+            this.configureCountry(
+              feature,
+              layer
+            );
+          }
+        });
 
-      const bounds = this.geoJsonLayer.getBounds();
+      this.geoJsonLayer.addTo(this.map);
+
+      const bounds =
+        this.geoJsonLayer.getBounds();
 
       if (bounds.isValid()) {
-        this.map!.fitBounds(bounds, {
+        this.map.fitBounds(bounds, {
           padding: [10, 10]
         });
       }
 
       this.isLoading.set(false);
     } catch {
-      this.error.set('The world map could not be loaded.');
+      this.error.set(
+        'The world map could not be loaded.'
+      );
+
       this.isLoading.set(false);
     }
   }
 
   private configureCountry(
     feature: Feature,
-    layer: L.Layer
+    layer: Layer
   ): void {
-    const countryName = this.getCountryName(feature);
-    const countryCode = this.getCountryCode(feature);
+    const countryName =
+      this.getCountryName(feature);
+
+    const countryCode =
+      this.getCountryCode(feature);
 
     layer.bindTooltip(countryName, {
       sticky: true,
@@ -113,7 +165,8 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
     });
 
     layer.on('mouseover', event => {
-      const countryLayer = event.target as L.Path;
+      const countryLayer =
+        event.target as Path;
 
       countryLayer.setStyle({
         weight: 2,
@@ -124,7 +177,8 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
     });
 
     layer.on('mouseout', event => {
-      const countryLayer = event.target as L.Path;
+      const countryLayer =
+        event.target as Path;
 
       countryLayer.setStyle(
         this.createStyle(countryCode)
@@ -137,7 +191,8 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
       }
 
       const visits =
-        this.travelService.getVisitsByCountry(countryCode);
+        this.travelService
+          .getVisitsByCountry(countryCode);
 
       if (!visits.length) {
         layer
@@ -151,7 +206,9 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
 
       const cities = Array.from(
         new Set(
-          visits.flatMap(visit => visit.cities)
+          visits.flatMap(
+            visit => visit.cities
+          )
         )
       );
 
@@ -169,21 +226,30 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
 
   private getCountryStyle(
     feature?: Feature
-  ): L.PathOptions {
-    const countryCode = this.getCountryCode(feature);
+  ): PathOptions {
+    const countryCode =
+      this.getCountryCode(feature);
 
-    return this.createStyle(countryCode);
+    return this.createStyle(
+      countryCode
+    );
   }
 
   private createStyle(
     countryCode: string
-  ): L.PathOptions {
+  ): PathOptions {
     const visited =
-      this.travelService.visitedCountryCodes().has(countryCode);
+      this.travelService
+        .visitedCountryCodes()
+        .has(countryCode);
 
     return {
-      fillColor: visited ? '#6366f1' : '#e5e7eb',
-      fillOpacity: visited ? 0.85 : 0.65,
+      fillColor: visited
+        ? '#6366f1'
+        : '#e5e7eb',
+      fillOpacity: visited
+        ? 0.85
+        : 0.65,
       color: '#ffffff',
       weight: 1
     };
@@ -196,28 +262,39 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.geoJsonLayer.eachLayer(layer => {
-      const countryLayer = layer as L.Path & {
-        feature?: Feature;
-      };
+    this.geoJsonLayer.eachLayer(
+      layer => {
+        const countryLayer =
+          layer as Path & {
+            feature?: Feature;
+          };
 
-      if (!countryLayer.feature) {
-        return;
+        if (!countryLayer.feature) {
+          return;
+        }
+
+        const countryCode =
+          this.getCountryCode(
+            countryLayer.feature
+          );
+
+        const visited =
+          visitedCountries.has(
+            countryCode
+          );
+
+        countryLayer.setStyle({
+          fillColor: visited
+            ? '#6366f1'
+            : '#e5e7eb',
+          fillOpacity: visited
+            ? 0.85
+            : 0.65,
+          color: '#ffffff',
+          weight: 1
+        });
       }
-
-      const countryCode =
-        this.getCountryCode(countryLayer.feature);
-
-      const visited =
-        visitedCountries.has(countryCode);
-
-      countryLayer.setStyle({
-        fillColor: visited ? '#6366f1' : '#e5e7eb',
-        fillOpacity: visited ? 0.85 : 0.65,
-        color: '#ffffff',
-        weight: 1
-      });
-    });
+    );
   }
 
   private getCountryCode(
@@ -228,7 +305,10 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
     }
 
     const properties =
-      feature.properties as Record<string, unknown>;
+      feature.properties as Record<
+        string,
+        unknown
+      >;
 
     const value =
       properties['ISO_A2_EH'] ??
@@ -251,7 +331,10 @@ export class WorldMapComponent implements AfterViewInit, OnDestroy {
     }
 
     const properties =
-      feature.properties as Record<string, unknown>;
+      feature.properties as Record<
+        string,
+        unknown
+      >;
 
     const value =
       properties['NAME_EN'] ??

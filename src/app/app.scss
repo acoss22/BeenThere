@@ -14,18 +14,18 @@
 
   h1 {
     margin: 0.4rem 0 0.75rem;
+    color: #111827;
     font-size: clamp(2.5rem, 6vw, 4.5rem);
     line-height: 1;
     letter-spacing: -0.05em;
-    color: #111827;
   }
 
   p {
     margin: 0;
     max-width: 520px;
+    color: #6b7280;
     font-size: 1.1rem;
     line-height: 1.6;
-    color: #6b7280;
   }
 }
 
@@ -35,6 +35,10 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.home-section {
+  margin-bottom: 3rem;
 }
 
 .map-section {
@@ -52,6 +56,11 @@
   }
 
   .app-header {
+    margin-bottom: 2rem;
+  }
+
+  .home-section,
+  .map-section {
     margin-bottom: 2rem;
   }
 }

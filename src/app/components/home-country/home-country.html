@@ -1,0 +1,77 @@
+<p>home-country works!</p>
+<section class="home-country">
+  <div class="home-country__header">
+    <span class="home-country__eyebrow">Home base</span>
+
+    <h2>Where do you live?</h2>
+
+    <p>
+      Set your home country so it can be shown differently on your map.
+    </p>
+  </div>
+
+  <div class="home-country__form">
+    <div class="form-field">
+      <label for="homeCountry">
+        I live in
+        <span aria-hidden="true">*</span>
+      </label>
+
+      <select
+        id="homeCountry"
+        [formControl]="homeCountry"
+      >
+        <option value="" disabled>
+          Select your country
+        </option>
+
+        @for (country of countries; track country.code) {
+          <option [value]="country.code">
+            {{ country.name }}
+          </option>
+        }
+      </select>
+
+      @if (
+        homeCountry.touched &&
+        homeCountry.hasError('required')
+      ) {
+        <p class="form-error">
+          Please select your home country.
+        </p>
+      }
+    </div>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="save-button"
+        (click)="save()"
+      >
+        Save home country
+      </button>
+
+      @if (profile().homeCountryCode) {
+        <button
+          type="button"
+          class="clear-button"
+          (click)="clear()"
+        >
+          Clear
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (profile().homeCountryName) {
+    <div class="current-home">
+      <span class="current-home__label">
+        Current home
+      </span>
+
+      <strong>
+        {{ profile().homeCountryName }}
+      </strong>
+    </div>
+  }
+</section>
