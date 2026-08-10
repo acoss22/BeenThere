@@ -1,0 +1,45 @@
+<section class="world-map">
+  <div class="world-map__header">
+    <div>
+      <span class="world-map__eyebrow">Your world</span>
+
+      <h2>Where have you been?</h2>
+
+      <p>
+        Every country you visit becomes part of your map.
+      </p>
+    </div>
+
+    <div class="world-map__legend">
+      <span class="legend-item">
+        <span class="legend-color legend-color--visited"></span>
+        Visited
+      </span>
+
+      <span class="legend-item">
+        <span class="legend-color legend-color--unvisited"></span>
+        Not visited
+      </span>
+    </div>
+  </div>
+
+  <div class="map-container">
+    <div
+      #map
+      class="map"
+      aria-label="World map showing visited countries"
+    ></div>
+
+    @if (isLoading()) {
+      <div class="map-status">
+        Loading your world...
+      </div>
+    }
+
+    @if (error()) {
+      <div class="map-status map-status--error">
+        {{ error() }}
+      </div>
+    }
+  </div>
+</section>
